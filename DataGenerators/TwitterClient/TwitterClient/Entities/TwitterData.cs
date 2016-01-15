@@ -48,6 +48,25 @@ namespace TwitterClient
     }
 
     [DataContract]
+    public class Entities
+    {
+        [DataMember] public List<object> hashtags { get; set; }
+        [DataMember] public List<Url> urls { get; set; }
+        [DataMember] public List<object> user_mentions { get; set; }
+        [DataMember] public List<object> symbols { get; set; }
+    }
+
+    [DataContract]
+    public class Url
+    {
+        [DataMember] public string url { get; set; }
+        [DataMember] public string expanded_url { get; set; }
+        [DataMember] public string display_url { get; set; }
+        [DataMember] public List<int> indices { get; set; }
+    }
+
+
+    [DataContract]
     public class Tweet
     {
         [DataMember(Name = "id")]                      public Int64 Id;
@@ -61,6 +80,7 @@ namespace TwitterClient
         [DataMember(Name = "retweet_count")]           public string RetweetCount;
         [DataMember(Name = "user")]                    public TwitterUser User;
         [DataMember(Name = "created_at")]              public string CreatedAt;
+        [DataMember(Name = "entities")]                public Entities Entities;
         [IgnoreDataMember]                             public string RawJson;
 
         public static IEnumerable<Tweet> StreamStatuses(TwitterConfig config)

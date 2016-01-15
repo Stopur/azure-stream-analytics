@@ -35,7 +35,7 @@ namespace TwitterClient
                 Language = tweet.Language != null ? tweet.Language : "(unknown)",
                 RawJson = tweet.RawJson,
                 SentimentScore = (int)Analyze(tweet.Text),
-                Topic = DetermineTopc(tweet.Text, twitterKeywords),
+                Topic = DetermineTopic(tweet, twitterKeywords),
             };
         }
 
@@ -106,10 +106,20 @@ namespace TwitterClient
         /// <param name="tweetText"></param>
         /// <param name="keywordFilters"></param>
         /// <returns></returns>
-        static string DetermineTopc(string tweetText, string keywordFilters)
+        static string DetermineTopic(Tweet tweet, string keywordFilters)
         {
+            var tweetText = tweet.Text;
             if (string.IsNullOrEmpty(tweetText))
                 return string.Empty;
+
+            if (tweet.Entities != null && tweet.Entities.urls != null)
+            {
+                foreach (var url in tweet.Entities.urls)
+                {
+                    // url might contain keyword
+                    tweetText += " " + url.expanded_url;
+                }
+            }
 
             string subject = string.Empty;
 
@@ -147,6 +157,7 @@ namespace TwitterClient
                 }
             }
 
+            // Generally because keyword is in a quoted status. We are okay ignoring those since they will come up on their own.
             return "Unknown";
         }
     }
