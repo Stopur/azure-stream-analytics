@@ -21,10 +21,10 @@ namespace TwitterClient
 {
     public static class Sentiment
     {
-        public static TwitterPayload ComputeScore(Tweet tweet, string twitterKeywords)
+        public static TwitterPayload ComputeScore(Tweet tweet)
         {
 
-            return new TwitterPayload
+            var payload = new TwitterPayload
             {
                 ID = tweet.Id,
                 CreatedAt = ParseTwitterDateTime(tweet.CreatedAt),
@@ -35,21 +35,31 @@ namespace TwitterClient
                 Language = tweet.Language != null ? tweet.Language : "(unknown)",
                 RawJson = tweet.RawJson,
                 SentimentScore = (int)Analyze(tweet.Text),
-                Topic = DetermineTopic(tweet, twitterKeywords),
+                //Topic = DetermineTopic(tweet, twitterKeywords),
             };
+
+            // Don't be fooled - this really is the Pacific time zone,
+            // not just standard time...
+            var zone = TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time");
+            payload.UtcOffset = zone.BaseUtcOffset.Hours;
+
+
+            return payload;
         }
 
         static DateTime ParseTwitterDateTime(string p)
         {
             if (p == null)
-                return DateTime.Now;
+                return DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc);
             p = p.Replace("+0000 ", "");
             DateTimeOffset result;
 
             if (DateTimeOffset.TryParseExact(p, "ddd MMM dd HH:mm:ss yyyy", CultureInfo.GetCultureInfo("en-us").DateTimeFormat, DateTimeStyles.AssumeUniversal, out result))
-                return result.DateTime;
+            {
+                return DateTime.SpecifyKind(result.DateTime, DateTimeKind.Utc);
+            }
             else
-                return DateTime.Now;
+                return DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc);
         }
 
         enum SentimentScore

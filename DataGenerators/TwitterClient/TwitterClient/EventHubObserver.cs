@@ -17,7 +17,7 @@ using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Newtonsoft.Json;
 using System.Configuration;
-
+using System.Diagnostics;
 
 namespace TwitterClient
 {
@@ -35,9 +35,9 @@ namespace TwitterClient
                 _eventHubClient = EventHubClient.CreateFromConnectionString(_config.ConnectionString, config.EventHubName);
                 
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-               
+                Trace.TraceError("Could not create EventHub: " + e.ToString());
             }
 
         }
@@ -47,7 +47,7 @@ namespace TwitterClient
             {
 
                 var serialisedString = JsonConvert.SerializeObject(TwitterPayloadData);
-                EventData data = new EventData(Encoding.UTF8.GetBytes(serialisedString)) { PartitionKey = TwitterPayloadData.Topic };
+                EventData data = new EventData(Encoding.UTF8.GetBytes(serialisedString)) { PartitionKey = TwitterPayloadData.UserName };
                 _eventHubClient.Send(data);
                
                 
@@ -55,9 +55,9 @@ namespace TwitterClient
                 Console.WriteLine("Sending" + serialisedString + " at: " + TwitterPayloadData.CreatedAt.ToString() );
                                 
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                
+                Trace.TraceError("Exception sending EventHub data: " + e.ToString());
             }
 
         }
@@ -69,7 +69,7 @@ namespace TwitterClient
 
         public void OnError(Exception error)
         {
-            
+            Trace.TraceError("EventHubObserver.OnError: ", error.ToString());
         }
 
     }

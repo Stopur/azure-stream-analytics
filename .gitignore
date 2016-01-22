@@ -5,6 +5,13 @@
 *.suo
 *.user
 *.sln.docstates
+secrets.json
+
+# Visual Studio 2015 cache/options directory
+.vs/
+
+# NuGet packages
+packages/
 
 # Build results
 [Dd]ebug/

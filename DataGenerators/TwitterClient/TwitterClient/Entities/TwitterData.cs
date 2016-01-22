@@ -12,6 +12,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Runtime.Serialization;
@@ -76,7 +77,7 @@ namespace TwitterClient
         [DataMember(Name = "retweeted")]               public bool Retweeted;
         [DataMember(Name = "text")]                    public string Text;
         [DataMember(Name = "lang")]                    public string Language;
-        [DataMember(Name = "source")]                  public string Source;
+        //[DataMember(Name = "source")]                  public string Source;
         [DataMember(Name = "retweet_count")]           public string RetweetCount;
         [DataMember(Name = "user")]                    public TwitterUser User;
         [DataMember(Name = "created_at")]              public string CreatedAt;
@@ -99,7 +100,11 @@ namespace TwitterClient
                 {
                     var result = (Tweet)jsonSerializer.ReadObject(new MemoryStream(Encoding.UTF8.GetBytes(line)));
                     result.RawJson = line;
-                    yield return result;
+                    if (result.User != null)
+                    {
+                        Trace.WriteLine("Tweet: {0}", line);
+                        yield return result;
+                    }
                 }
 
                 // Oops the Twitter has ended... or more likely some error have occurred.
@@ -113,6 +118,8 @@ namespace TwitterClient
 
         static TextReader ReadTweets(TwitterConfig config)
         {
+            Trace.TraceInformation("Entering ReadTweets");
+
             var oauth_version = "1.0";
             var oauth_signature_method = "HMAC-SHA1";
 
@@ -122,19 +129,21 @@ namespace TwitterClient
                 (DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc))
                     .TotalSeconds).ToString();
 
+#if false
             var resource_url = "https://stream.twitter.com/1.1/statuses/filter.json";
+#endif
+            var resource_url = "https://userstream.twitter.com/1.1/user.json";
 
             // create oauth signature
             var baseString = string.Format(
                 "oauth_consumer_key={0}&oauth_nonce={1}&oauth_signature_method={2}&" +
-                "oauth_timestamp={3}&oauth_token={4}&oauth_version={5}&track={6}",
+                "oauth_timestamp={3}&oauth_token={4}&oauth_version={5}",
                 config.OAuthConsumerKey,
                 oauth_nonce,
                 oauth_signature_method,
                 oauth_timestamp,
                 config.OAuthToken,
-                oauth_version,
-                Uri.EscapeDataString(config.Keywords));
+                oauth_version);
 
             baseString = string.Concat("POST&", Uri.EscapeDataString(resource_url), "&", Uri.EscapeDataString(baseString));
 
@@ -167,8 +176,8 @@ namespace TwitterClient
             // make the request
             ServicePointManager.Expect100Continue = false;
 
-            var postBody = "track=" + config.Keywords;
-            resource_url += "?" + postBody;
+            //var postBody = "track=" + config.Keywords;
+            //resource_url += "?" + postBody;
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(resource_url);
             request.Headers.Add("Authorization", authHeader);
             request.Method = "POST";
@@ -180,10 +189,14 @@ namespace TwitterClient
             // bail out and retry after 5 seconds
             var tresponse = request.GetResponseAsync();
             if (tresponse.Wait(5000))
+            {
+                Trace.TraceInformation("Leaving ReadTweets: new StreamReader(tresponse.Result.GetResponseStream())");
                 return new StreamReader(tresponse.Result.GetResponseStream());
+            }
             else
             {
-                request.Abort(); 
+                request.Abort();
+                Trace.TraceInformation("Leaving ReadTweets: StreamReader.Null");
                 return StreamReader.Null;
             }
         }
@@ -199,26 +212,29 @@ namespace TwitterClient
         public string ProfileImageUrl;
         public string Text;
         public string Language;
-        public string Topic;
+        //public string Topic;
         public int SentimentScore;
+
+        public int UtcOffset;
 
         public string RawJson;
 
         public override string ToString()
         {
-            return new { ID, CreatedAt, UserName, TimeZone, ProfileImageUrl, Text, Language, Topic, SentimentScore }.ToString();
+            return new { ID, CreatedAt, UserName, TimeZone, ProfileImageUrl, Text, Language, /*Topic,*/ SentimentScore }.ToString();
         }
     }
 
     public class Payload
     {
         public DateTime CreatedAt;
-        public string Topic;
+        public int UtcOffset;
+        public string UserName;
         public int SentimentScore;
                 
         public override string ToString()
         {
-            return new {  CreatedAt,  Topic, SentimentScore }.ToString();
+            return new {  CreatedAt, UtcOffset, UserName, SentimentScore }.ToString();
         }
     }
 
